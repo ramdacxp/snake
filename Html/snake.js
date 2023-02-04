@@ -7,8 +7,7 @@ Usage:
 Declare a <canvas> somewhere in your HTML file.
 Then create a SnakeGame object with the supplied canvas and settings:
 
-  let mainCanvas = document.getElementById("mainCanvas");
-  let game = new SnakeGame(mainCanvas, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE);
+  let game = new SnakeGame("mainCanvas", MAP_WIDTH, MAP_HEIGHT, TILE_SIZE);
   game.growthRate = 5;
   game.gameTick();
 
@@ -19,11 +18,10 @@ class SnakeGame {
   static get FOOD() { return 1; }
   static get SNAKE() { return 2; }
 
-  static get VK_LEFT() { return 37; }
-  static get VK_RIGHT() { return 39; }
-  static get VK_UP() { return 38; }
-  static get VK_DOWN() { return 40; }
-  static get VK_R() { return 82; }
+  static get DIR_UP() { return 1; }
+  static get DIR_DOWN() { return 2; }
+  static get DIR_LEFT() { return 3; }
+  static get DIR_RIGHT() { return 4; }
 
   // These are just wrappers around JavaScript array functions so I don't get confused
   // about where I'm inserting an object.
@@ -33,23 +31,25 @@ class SnakeGame {
   static popBack(arr) { arr.pop(); }
   static back(arr) { return arr[arr.length - 1]; }
 
-  constructor(canvas, mapWidth, mapHeight, tileSize) {
+  constructor(canvasId, hudId, mapWidth, mapHeight, tileSize) {
+    this.hudId = hudId;
     this.mapWidth = mapWidth;
     this.mapHeight = mapHeight;
     this.tileSize = tileSize;
-    this.hudHeight = 36;
     this.screenWidth = this.mapWidth * this.tileSize;
-    this.screenHeight = this.mapHeight * this.tileSize + this.hudHeight;
+    this.screenHeight = this.mapHeight * this.tileSize;
     this.maxScore = 30;
     this.growthRate = 5;
     this.timerDelay = 60;
-    this.initCanvas(canvas);
+    this.initCanvas(canvasId);
     this.reset();
     this.bindKeys();
+
+    this.setStatus("Willkommen!");
   }
 
-  initCanvas(canvas) {
-    this.canvas = canvas;
+  initCanvas(canvasId) {
+    this.canvas = document.getElementById(canvasId);
     this.context = this.canvas.getContext('2d');
     this.canvas.width = this.screenWidth;
     this.canvas.height = this.screenHeight;
@@ -73,65 +73,96 @@ class SnakeGame {
     }
   }
 
+  setStatus(msg) {
+    var status = document.getElementById(this.hudId);
+    if (status) status.innerText = msg;
+  }
+
   reset() {
-    this.currDirection = 0;
     this.directions = [];
-    var map = this.map = [];
+    this.currDirection = 0;
+    this.growCounter = 0;
+    this.score = 0;
+    this.map = [];
+
+    // create empty map
     for (var col = 0; col < this.mapWidth; ++col) {
-      map[col] = [];
+      this.map[col] = [];
       for (var row = 0; row < this.mapHeight; ++row) {
-        map[col][row] = SnakeGame.EMPTY;
+        this.map[col][row] = SnakeGame.EMPTY;
       }
     }
-    var first = { x: Math.floor(this.mapWidth / 2), y: Math.floor(this.mapHeight / 2) };
+
+    // init snake in the middle
+    var first = {
+      x: Math.floor(this.mapWidth / 2),
+      y: Math.floor(this.mapHeight / 2)
+    };
     this.snake = [first];
-    map[first.x][first.y] = SnakeGame.SNAKE;
-    this.growCounter = this.score = this.currDirection = 0;
+    this.map[first.x][first.y] = SnakeGame.SNAKE;
+
     this.addFood();
+  }
+
+  queueDirection(direction) {
+    if (!this.directions.length) {
+      SnakeGame.pushBack(this.directions, direction);
+    }
+    else if (SnakeGame.back(this.directions) != direction) {
+      SnakeGame.pushBack(this.directions, direction);
+    }
   }
 
   bindKeys() {
     var game = this;
     document.onkeydown = function (e) {
       e = e || window.event;
-      switch (e.keyCode) { // which key was pressed?
-        case SnakeGame.VK_UP:
-        case SnakeGame.VK_DOWN:
-        case SnakeGame.VK_LEFT:
-        case SnakeGame.VK_RIGHT:
-          if (!game.directions.length) {
-            SnakeGame.pushBack(game.directions, e.keyCode);
-          }
-          else if (SnakeGame.back(game.directions) != e.keyCode) {
-            SnakeGame.pushBack(game.directions, e.keyCode);
-          }
+      switch (e.key) {
+        case "w":
+        case "W":
+        case "ArrowUp":
+          game.queueDirection(SnakeGame.DIR_UP);
           break;
-        case SnakeGame.VK_R:
+        case "a":
+        case "A":
+        case "ArrowLeft":
+          game.queueDirection(SnakeGame.DIR_LEFT);
+          break;
+        case "s":
+        case "S":
+        case "ArrowDown":
+          game.queueDirection(SnakeGame.DIR_DOWN);
+          break;
+        case "d":
+        case "D":
+        case "ArrowRight":
+          game.queueDirection(SnakeGame.DIR_RIGHT);
+          break;
+        case "r":
+        case "R":
           game.reset();
           break;
       }
     }
   }
 
-  oppositeDirection(d) {
-    switch (d) {
-      case SnakeGame.VK_LEFT: return SnakeGame.VK_RIGHT;
-      case SnakeGame.VK_RIGHT: return SnakeGame.VK_LEFT;
-      case SnakeGame.VK_UP: return SnakeGame.VK_DOWN;
-      case SnakeGame.VK_DOWN: return SnakeGame.VK_UP;
+  getOppositeDirection(direction) {
+    switch (direction) {
+      case SnakeGame.DIR_LEFT: return SnakeGame.DIR_RIGHT;
+      case SnakeGame.DIR_RIGHT: return SnakeGame.DIR_LEFT;
+      case SnakeGame.DIR_UP: return SnakeGame.DIR_DOWN;
+      case SnakeGame.DIR_DOWN: return SnakeGame.DIR_UP;
       default: return 0;
     }
   }
 
   addFood() {
-    var map = this.map;
-    var x = Math.floor(Math.random() * this.mapWidth);
-    var y = Math.floor(Math.random() * this.mapHeight);
-    while (map[x][y] != SnakeGame.EMPTY) {
+    var x, y;
+    do {
       x = Math.floor(Math.random() * this.mapWidth);
       y = Math.floor(Math.random() * this.mapHeight);
-    }
-    map[x][y] = SnakeGame.FOOD;
+    } while (this.map[x][y] != SnakeGame.EMPTY);
+    this.map[x][y] = SnakeGame.FOOD;
   }
 
   drawTile(x, y, color) {
@@ -140,25 +171,10 @@ class SnakeGame {
   }
 
   drawHUD() {
-    // HUD background
-    this.context.fillStyle = "rgb(64,64,64)";
-    this.context.fillRect(0, this.screenHeight - this.hudHeight, this.screenWidth, this.hudHeight);
-
-    // HUD Text
-    this.context.font = "16px Tahoma";
-    this.context.fillStyle = "black";
-    this.context.textAlign = "left";
-    this.context.fillText(
-      "Punkte: " + this.score + " von " + this.maxScore,
-      16,
-      this.screenHeight - this.hudHeight / 2 + 2);
-
-    if (this.score == this.maxScore) {
-      this.context.font = "16pt Tahoma";
-      this.context.fillStyle = "white";
-      this.context.textAlign = "center";
-      this.context.fillText("Du hast gewonnen!", this.screenWidth / 2, this.screenHeight / 2);
-    }
+    if (this.score == this.maxScore)
+      this.setStatus("Du hast gewonnen!");
+    else
+      this.setStatus("Punkte: " + this.score + " von " + this.maxScore);
   }
 
   draw() {
@@ -196,7 +212,7 @@ class SnakeGame {
       if (this.snake.length == 1) {
         this.currDirection = this.directions[0];
       }
-      else if (this.directions[0] != this.oppositeDirection(this.currDirection)) {
+      else if (this.directions[0] != this.getOppositeDirection(this.currDirection)) {
         this.currDirection = this.directions[0];
       }
       SnakeGame.popFront(this.directions);
@@ -208,10 +224,10 @@ class SnakeGame {
     head.y = currhead.y;
 
     switch (this.currDirection) {
-      case SnakeGame.VK_LEFT: head.x--; break;
-      case SnakeGame.VK_RIGHT: head.x++; break;
-      case SnakeGame.VK_UP: head.y--; break;
-      case SnakeGame.VK_DOWN: head.y++; break;
+      case SnakeGame.DIR_LEFT: head.x--; break;
+      case SnakeGame.DIR_RIGHT: head.x++; break;
+      case SnakeGame.DIR_UP: head.y--; break;
+      case SnakeGame.DIR_DOWN: head.y++; break;
       default: return;
     }
 

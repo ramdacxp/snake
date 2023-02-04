@@ -26,8 +26,9 @@ Uses Snake game by Andrew Lim; https://github.com/andrew-lim
 </head>
 
 <body>
-  <div id="canvasWrapper">
-    <canvas id="mainCanvas"></canvas>
+  <div id="wrapper">
+    <canvas id="playground"></canvas>
+    <div id="status"></div>
   </div>
   <script type="text/javascript" src="snake.js"></script>
   <script>
@@ -36,8 +37,7 @@ Uses Snake game by Andrew Lim; https://github.com/andrew-lim
     // const TILE_SIZE = 20;
     const TILE_SIZE = Math.floor((window.innerWidth - 50) / MAP_WIDTH);
 
-    let mainCanvas = document.getElementById("mainCanvas");
-    let game = new SnakeGame(mainCanvas, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE);
+    let game = new SnakeGame("playground", "status", MAP_WIDTH, MAP_HEIGHT, TILE_SIZE);
     game.growthRate = 5;
     game.timerDelay = 150;
     game.gameTick();
