@@ -1,0 +1,47 @@
+<!--
+Uses Snake game by Andrew Lim; https://github.com/andrew-lim
+-->
+<html>
+
+<head>
+  <title>Snake</title>
+  <style>
+    body {
+      background-color: #333;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #canvasWrapper {
+      text-align: center;
+      font-family: "Arial";
+      overflow: hidden;
+      font-size: 10pt;
+    }
+
+    #mainCanvas {
+      border: 1px solid lightskyblue;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="canvasWrapper">
+    <canvas id="mainCanvas"></canvas>
+  </div>
+  <script type="text/javascript" src="snake.js"></script>
+  <script>
+    const MAP_WIDTH = 45;
+    const MAP_HEIGHT = 24;
+    // const TILE_SIZE = 20;
+    const TILE_SIZE = Math.floor((window.innerWidth - 50) / MAP_WIDTH);
+
+    let mainCanvas = document.getElementById("mainCanvas");
+    let game = new SnakeGame(mainCanvas, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE);
+    game.growthRate = 5;
+    game.timerDelay = 150;
+    game.gameTick();
+  </script>
+</body>
+
+</html>
