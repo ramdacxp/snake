@@ -18,6 +18,7 @@ class SnakeGame {
   static get FOOD() { return 1; }
   static get SNAKE() { return 2; }
 
+  static get DIR_NONE() { return 0; }
   static get DIR_UP() { return 1; }
   static get DIR_DOWN() { return 2; }
   static get DIR_LEFT() { return 3; }
@@ -142,6 +143,9 @@ class SnakeGame {
         case "R":
           game.reset();
           break;
+        case "0": // fake :)
+          game.currDirection = SnakeGame.DIR_NONE;
+          break;
       }
     }
   }
@@ -152,7 +156,7 @@ class SnakeGame {
       case SnakeGame.DIR_RIGHT: return SnakeGame.DIR_LEFT;
       case SnakeGame.DIR_UP: return SnakeGame.DIR_DOWN;
       case SnakeGame.DIR_DOWN: return SnakeGame.DIR_UP;
-      default: return 0;
+      default: return SnakeGame.DIR_NONE;
     }
   }
 
