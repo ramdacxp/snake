@@ -1,6 +1,8 @@
 # Snake
 
-HTML5 Snake Game
+HTML5 Snake Game Demo
+
+Hosted [here](https://ramdacxp.github.io/snake/Html/) on [GitHub pages](https://docs.github.com/en/pages).
 
 ## License
 
